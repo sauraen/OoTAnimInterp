@@ -6,13 +6,15 @@ well.
 
 ### License
 
-Copyright (C) 2021 Sauraen
+Copyright (C) 2021 Sauraen \
 You may redistribute, create derivative works of, and otherwise copy this
 software, subject to the following conditions:
 - If the software or modified versions of it are distributed in source form,
   it must retain this copyright notice and list of conditions
 - Sauraen must be credited (e.g. in the Special Thanks) of any project using
   this software or modified versions of it
+
+This repo does not contain any information derived from the Gigaleak.
 
 ### How do I use this?
 
@@ -23,7 +25,7 @@ etc. There are more details in code comments.
 
 ### What has this been tested on?
 
-A project on 1.0U (compiled by gcc, using z64hdr) with a custom SkelAnime. I set
+A project on 1.0U (compiled by gcc, using z64hdr) with a custom skeleton. I set
 up a button to enable and disable the slerp algorithm and then interpolated
 between custom animations. With the vanilla algorithm, some cases of
 interpolation cause the skeleton to have very badly wrong rotations during the
@@ -62,10 +64,15 @@ of Euler angles directly would not be too bad. There are two problems with this:
   Vanilla skeletons are typically set up (by whatever modeling software Nintendo
   used) to have each limb point along its bone, and the bone rotation to be 0
   when the bone is straight up. This is what produces the "folded skeletons".
-  This would make fast64 less compatible with vanilla skeletons.
+  (Folded skeletons are not required for OoT itself; it has no concept of bones,
+  just limbs with rotations. A limb with a rotation of 0 can be shaped like
+  whatever you want, it does not have to be sticking up vertically.) However,
+  making this change would make fast64 no longer able to create custom
+  animations for vanilla skeletons (unless the old version was kept as an
+  option).
 - If the animations happened to move the bones far from their rest position,
-  the issues would still occur. This isn't a solution, just a way to make the
-  problem much less likely to be encountered.
+  the issues would still occur. This isn't a solution, just sweeping the problem
+  under the rug.
 
 ### Are there any disadvantages / downsides to this patch?
 
@@ -73,7 +80,7 @@ of Euler angles directly would not be too bad. There are two problems with this:
   independently. Checks have been added to the code to only run the slerp
   algorithm when the naive algorithm is more likely to give bad results. And,
   OoT is typically not CPU bound, so it may not matter; you may way to try using
-  the slerp algorithm globally.
+  the slerp algorithm for all cases.
 - The slerp algorithm is designed to always take the shortest path between two
   orientations. For certain situations, the shortest path is physically the
   wrong answer. For example, raise your hand as high as you can, then rotate
@@ -81,20 +88,22 @@ of Euler angles directly would not be too bad. There are two problems with this:
   downwards, and keep going until it points down and backwards. If these were
   the two orientations to interpolate between, the slerp algorithm would find
   the shortest path, which is going around backwards, the wrong way. There's no
-  way the game would know about this, and the naive algorithm also has this
-  behavior when only one of the Euler angles is changing.
+  way the game would know about the limits of rotation of your arm. (Besides,
+  the naive algorithm also has this behavior, for example when only one of the
+  Euler angles is changing.)
 
 ### How does OoT represent rotations (and other transformations)?
 
-OoT uses a matrix stack in sys_matrix.c. In the SkelAnime context, the matrix
-state currently being manipulated on the stack is the `model` matrix *M*, 
-which is the transformation from the coordinate space of the limb into world
-space. That is, for a vertex *v* in the limb's DL, *w = Mv*. Actually the RSP
+OoT uses a matrix stack in `sys_matrix.c`. In the SkelAnime context, the matrix
+state currently being manipulated on the stack is the `model` matrix *M*, which
+is the transformation from the coordinate space of the limb into world space
+*w*. That is, for a vertex *v* in the limb's DL, *w = Mv*. Actually the RSP
 multiplies the model, view, and projection matrices like *PVM* and applies the
-resulting single matrix to the vertex, *w = (PVM)v*. This is the same as
-*w = P * (V * (M * v))*; matrices and transformations are applied to the vertex
-right to left, simply because the rightmost matrix is the one immediately next
-to *v*.
+resulting single matrix to the vertex, *w = (PVM)v*. This is the same as *w = P
+* (V * (M * v))*; matrices and transformations are applied to the vertex right
+to left, simply because the rightmost matrix is the one immediately next to *v*.
+(Matrix multiplication is not commutative, changing the order gives a different
+result.)
 
 When a transform is applied to the matrix on the stack, it's applied on the
 right. So if the stack currently holds *M* and you call `Matrix_Mult` with 
@@ -107,16 +116,17 @@ rotation. So this would be *MPZYX*. So you can see that when the limb is
 drawn, first the X rotation matrix is applied to it, then the Y, and then Z.
 These matrices being applied in `Matrix_JointPosition` are global rotations,
 so to be more precise, when the limb is drawn, it is first rotated in global X,
-than in global Y, then in global Z, then translated by P, and then this process
-repeats for the parent limbs whose transforms are already on the stack. The
-last transforms are done before your actor's draw function is called; in
-order of being applied to the vertex (opposite order that they call the
-`Matrix_` functions), they are the actor scale, rotation, and world position.
+than in global Y, then in global Z, then translated by a global delta of P, and
+then this process repeats for the parent limbs whose transforms are already on
+the stack. The last transforms are done before your actor's draw function is
+called; in order of being applied to the vertex (opposite order that they call
+the `Matrix_` functions), they are the actor scale, rotation, and world
+position.
 
-So in summary, OoT uses the Euler angles convention global-X, global-Y, global-
-Z. (This is also equivalent to doing local transforms in the opposite order:
-local-Z, local-Y, local-X.) Fortunately, this is a common standard, and was used
-on the Wikipedia page (but this is not the same standard as used in the
+So in summary, OoT uses the Euler angles convention global-X, global-Y,
+global-Z. (This is also equivalent to doing local transforms in the opposite
+order: local-Z, local-Y, local-X.) Fortunately, this is a common standard, and
+was used on the Wikipedia page (but this is not the same standard as used in the
 euclideanspace.com pages).
 
 ### Algorithms modified from:

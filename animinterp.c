@@ -7,6 +7,8 @@ software, subject to the following conditions:
 - Sauraen must be credited (e.g. in the Special Thanks) of any project using
   this software or modified versions of it
 
+This software does not contain any information derived from the Gigaleak.
+
 See README.md for more general information about OoT's math conventions and the
 design of this patch. Algorithms are modified from:
 https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
