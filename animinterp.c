@@ -32,7 +32,8 @@ static inline s16 Fixed_atan2s(float y, float x){
     //atan2 is defined as atan2(y, x). OoT has the arguments backwards, just 
     //like it has them backwards in bcopy and other functions.
     /*
-    //This is a test to prove this.
+    //Since the decomp argument naming is correct for Math_Atan2S but probably
+    //not correct for Math_GetAtan2Tbl, this is a test to check the answers.
     printf("atan2 %04X %04X %04X %04X",
         Math_Atan2S(0.0f, 1.0f), //should be 0 -> displays 4000
         Math_Atan2S(1.0f, 0.0f), //should be 4000 -> displays 0
@@ -164,6 +165,7 @@ static void Patched_InterpFrameTable(s32 limbCount, Vec3s* dst, Vec3s* start, Ve
             qo.z = ws * qs.z + wt * qt.z;
             Quat2Euler(&qo, dst);
         }else{
+            //This is the vanilla algorithm.
             dst->x = (s16)(dx * weight) + start->x;
             dst->y = (s16)(dy * weight) + start->y;
             dst->z = (s16)(dz * weight) + start->z;

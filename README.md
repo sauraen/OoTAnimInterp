@@ -69,7 +69,7 @@ of Euler angles directly would not be too bad. There are two problems with this:
   whatever you want, it does not have to be sticking up vertically.) However,
   making this change would make fast64 no longer able to create custom
   animations for vanilla skeletons (unless the old version was kept as an
-  option).
+  option... which would of course keep the issue in these cases).
 - If the animations happened to move the bones far from their rest position,
   the issues would still occur. This isn't a solution, just sweeping the problem
   under the rug.
