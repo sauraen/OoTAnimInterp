@@ -85,3 +85,42 @@ of Euler angles directly would not be too bad. There are two problems with this:
   behavior when only one of the Euler angles is changing.
 
 ### How does OoT represent rotations (and other transformations)?
+
+OoT uses a matrix stack in sys_matrix.c. In the SkelAnime context, the matrix
+state currently being manipulated on the stack is the `model` matrix *M*, 
+which is the transformation from the coordinate space of the limb into world
+space. That is, for a vertex *v* in the limb's DL, *w = Mv*. Actually the RSP
+multiplies the model, view, and projection matrices like *PVM* and applies the
+resulting single matrix to the vertex, *w = (PVM)v*. This is the same as
+*w = P * (V * (M * v))*; matrices and transformations are applied to the vertex
+right to left, simply because the rightmost matrix is the one immediately next
+to *v*.
+
+When a transform is applied to the matrix on the stack, it's applied on the
+right. So if the stack currently holds *M* and you call `Matrix_Mult` with 
+another matrix *Q*, or `Matrix_Translate` with a translation corresponding to
+matrix *T*, or any of the other similar functions, the stack will then hold
+*MQ* or *MT* etc. The various SkelAnime draw functions call 
+`Matrix_JointPosition`; looking at its source code we can see that it applies
+the limb position, then the Z rotation, then the Y rotation, and then the X
+rotation. So this would be *MPZYX*. So you can see that when the limb is
+drawn, first the X rotation matrix is applied to it, then the Y, and then Z.
+These matrices being applied in `Matrix_JointPosition` are global rotations,
+so to be more precise, when the limb is drawn, it is first rotated in global X,
+than in global Y, then in global Z, then translated by P, and then this process
+repeats for the parent limbs whose transforms are already on the stack. The
+last transforms are done before your actor's draw function is called; in
+order of being applied to the vertex (opposite order that they call the
+`Matrix_` functions), they are the actor scale, rotation, and world position.
+
+So in summary, OoT uses the Euler angles convention global-X, global-Y, global-
+Z. (This is also equivalent to doing local transforms in the opposite order:
+local-Z, local-Y, local-X.) Fortunately, this is a common standard, and was used
+on the Wikipedia page (but this is not the same standard as used in the
+euclideanspace.com pages).
+
+### Algorithms modified from:
+
+- https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+- http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
+- http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/Quaternions.pdf
